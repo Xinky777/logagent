@@ -8,7 +8,7 @@ import (
 
 var (
 	client  sarama.SyncProducer
-	MsgChan chan *sarama.ProducerMessage
+	msgChan chan *sarama.ProducerMessage
 )
 
 //Init 初始化全局Kafka连接
@@ -25,7 +25,7 @@ func Init(address []string, chanSize int64) (err error) {
 		logrus.Error("producer closed, err:", err)
 		return
 	}
-	MsgChan = make(chan *sarama.ProducerMessage, chanSize)
+	msgChan = make(chan *sarama.ProducerMessage, chanSize)
 	//起一个goroutine从MsgChan中读数据
 	go sendMsg()
 	return
@@ -35,7 +35,7 @@ func Init(address []string, chanSize int64) (err error) {
 func sendMsg() {
 	for {
 		select {
-		case msg := <-MsgChan:
+		case msg := <-msgChan:
 			pid, offset, err := client.SendMessage(msg)
 			if err != nil {
 				logrus.Warning("send msg failed,err:", err)
@@ -43,4 +43,9 @@ func sendMsg() {
 			logrus.Info("send msg to kafka success pid:%v offset:%v", pid, offset)
 		}
 	}
+}
+
+// SendMsgChan 定义一个函数向外部暴露msgChan
+func SendMsgChan(msg *sarama.ProducerMessage) {
+	msgChan <- msg
 }
