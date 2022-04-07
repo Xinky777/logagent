@@ -37,8 +37,8 @@ func run() {
 
 func main() {
 	//1.读配置文件
-	//初始化配置文件
-	//加载kafka和config的配置项
+	//初始化全局配置文件
+	//加载全局文件配置项
 	var configObj = new(Config)
 	err := ini.MapTo(configObj, "./config/config.ini")
 	if err != nil {
@@ -69,6 +69,8 @@ func main() {
 		logrus.Errorf("etcd GetConf failed,err:%v", err)
 		return
 	}
+	logrus.Info("init etcd success!")
+
 	//监控etcd中 configObj.EtcdConfig.CollectKey对应值的变化
 	go etcd.WatchConf(configObj.EtcdConfig.CollectKey)
 

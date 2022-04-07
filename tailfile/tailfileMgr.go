@@ -45,6 +45,8 @@ func Init(allConf []model.CollectEntry) (err error) {
 }
 
 //watch tailTaskMgr监控新配置并管理所有配置的方法
+//一直在等confChan有值
+//有值就开始管理之前的tailTack
 func (t *tailTaskMgr) watch() {
 	for {
 		//等待新配置载入
@@ -93,6 +95,7 @@ func (t *tailTaskMgr) isExist(conf model.CollectEntry) bool {
 	return ok
 }
 
+//SendNewConf 把新的配置对象丢给管理对象的confChan中
 func SendNewConf(newConf []model.CollectEntry) {
 	ttMgr.confChan <- newConf
 }
