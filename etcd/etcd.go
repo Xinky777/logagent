@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"logagent/model"
+	"logagent/tailfile"
 	"time"
 
 	"github.com/sirupsen/logrus"
@@ -50,4 +51,25 @@ func GetConf(key string) (collectEntryList []model.CollectEntry, err error) {
 		return
 	}
 	return
+}
+
+//WatchConf 监控etcd中日志收集项配置变化
+func WatchConf(key string) {
+	for {
+		watchCh := client.Watch(context.Background(), key)
+		var newConf []model.CollectEntry
+		for wresp := range watchCh {
+			logrus.Info("get new conf from etcd...")
+			for _, evt := range wresp.Events {
+				fmt.Printf("type:%s key:%s value:%s\n", evt.Type, evt.Kv.Key, evt.Kv.Value)
+				err := json.Unmarshal(evt.Kv.Value, &newConf)
+				if err != nil {
+					logrus.Errorf("json Unmarshal new conf failed,err:%v", err)
+					continue
+				}
+				//告诉tailfile模块启用新配置
+				tailfile.SendNewConf(newConf) //无接受就会阻塞
+			}
+		}
+	}
 }

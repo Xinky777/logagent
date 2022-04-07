@@ -69,6 +69,8 @@ func main() {
 		logrus.Errorf("etcd GetConf failed,err:%v", err)
 		return
 	}
+	//监控etcd中 configObj.EtcdConfig.CollectKey对应值的变化
+	go etcd.WatchConf(configObj.EtcdConfig.CollectKey)
 
 	//4.根据配置中的日志路径初始化tail
 	//根据配置文件中的指定路径
