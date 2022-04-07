@@ -1,8 +1,10 @@
 package main
 
 import (
+	"fmt"
 	"logagent/etcd"
 	"logagent/kafka"
+	"logagent/model"
 	"logagent/tailfile"
 
 	"github.com/go-ini/ini"
@@ -36,11 +38,18 @@ func run() {
 }
 
 func main() {
+	//0.获取本机ip 为了后续去etcd取配置文件
+	ip, err := model.GetOutBoundIP()
+	if err != nil {
+		logrus.Errorf("Get IP failed,err:%v", err)
+		return
+	}
+
 	//1.读配置文件
 	//初始化全局配置文件
 	//加载全局文件配置项
 	var configObj = new(Config)
-	err := ini.MapTo(configObj, "./config/config.ini")
+	err = ini.MapTo(configObj, "./config/config.ini")
 	if err != nil {
 		logrus.Errorf("logic config failed,err:%v", err)
 		return
@@ -63,18 +72,21 @@ func main() {
 		logrus.Errorf("init etcd failed,err:%v", err)
 		return
 	}
-	//从etcd中拉去要收集日志的配置项
-	allConf, err := etcd.GetConf(configObj.EtcdConfig.CollectKey)
+	//将本机ip以fmt.Sprintf的形式插入到配置信息configObj.EtcdConfig.CollectKey中
+	collectKey := fmt.Sprintf(configObj.EtcdConfig.CollectKey, ip)
+
+	//4.从etcd中拉去要收集日志的配置项
+	allConf, err := etcd.GetConf(collectKey)
 	if err != nil {
 		logrus.Errorf("etcd GetConf failed,err:%v", err)
 		return
 	}
 	logrus.Info("init etcd success!")
 
-	//监控etcd中 configObj.EtcdConfig.CollectKey对应值的变化
-	go etcd.WatchConf(configObj.EtcdConfig.CollectKey)
+	//5.监控etcd中 configObj.EtcdConfig.CollectKey对应值的变化
+	go etcd.WatchConf(collectKey)
 
-	//4.根据配置中的日志路径初始化tail
+	//6.根据配置中的日志路径初始化tail
 	//根据配置文件中的指定路径
 	//创建一个对应的tailObj
 	err = tailfile.Init(allConf) //把从etcd中加载获取的配置项撞到Init中
